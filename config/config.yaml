@@ -1,0 +1,25 @@
+server:
+  port: 8080
+  host: localhost
+  readTimeoutSeconds: 30
+  writeTimeoutSeconds: 30
+  idleTimeoutSeconds: 60
+  shutdownTimeoutSeconds: 30
+
+database:
+  driver: postgres
+  host: localhost
+  port: 5432
+  name: observio
+  user: postgres
+  password: postgres
+  sslMode: disable
+
+logging:
+  level: info
+  format: text
+  file: logs/observio.log
+
+auth:
+  jwtSecret: your-secret-key-here
+  jwtExpirationMinutes: 60
