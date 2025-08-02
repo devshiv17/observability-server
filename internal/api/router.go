@@ -74,8 +74,9 @@ func NewRouter(cfg *config.Config, logger *log.Logger) http.Handler {
 		// Logs exploration endpoint (ClickHouse-based)
 		if clickhouseClient != nil {
 			r.Mount("/logs", handlers.NewLogsHandler(cfg, logger, clickhouseClient))
+			r.Mount("/explore", handlers.NewExploreHandler(cfg, logger, clickhouseClient))
 		} else {
-			logger.Printf("Warning: ClickHouse client not available, logs endpoint disabled")
+			logger.Printf("Warning: ClickHouse client not available, logs and explore endpoints disabled")
 		}
 	})
 
