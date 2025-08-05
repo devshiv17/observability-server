@@ -15,6 +15,13 @@ database:
   password: postgres
   sslMode: disable
 
+clickhouse:
+  host: 192.168.1.2
+  port: 9000
+  database: default
+  username: default
+  password: "shiva1712"
+
 logging:
   level: info
   format: text

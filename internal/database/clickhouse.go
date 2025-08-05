@@ -418,3 +418,58 @@ func (c *ClickHouseClient) ExecuteExploreQuery(ctx context.Context, req ExploreR
 		Total:   len(data),
 	}, nil
 }
+
+// QueryRaw executes a raw SQL query and returns the results as a structured response
+func (c *ClickHouseClient) QueryRaw(ctx context.Context, query string) ([]string, []map[string]interface{}, error) {
+	c.logger.Printf("Executing raw query: %s", query)
+	
+	rows, err := c.conn.Query(ctx, query)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to execute raw query: %w", err)
+	}
+	defer rows.Close()
+	
+	// Get column types
+	columnTypes := rows.ColumnTypes()
+	columns := make([]string, len(columnTypes))
+	for i, col := range columnTypes {
+		columns[i] = col.Name()
+	}
+	
+	// Scan results
+	var data []map[string]interface{}
+	for rows.Next() {
+		values := make([]interface{}, len(columns))
+		valuePtrs := make([]interface{}, len(columns))
+		for i := range values {
+			valuePtrs[i] = &values[i]
+		}
+		
+		if err := rows.Scan(valuePtrs...); err != nil {
+			c.logger.Printf("Error scanning row: %v", err)
+			continue
+		}
+		
+		row := make(map[string]interface{})
+		for i, col := range columns {
+			val := values[i]
+			if val != nil {
+				// Convert byte arrays to strings for JSON serialization
+				if b, ok := val.([]byte); ok {
+					row[col] = string(b)
+				} else {
+					row[col] = val
+				}
+			} else {
+				row[col] = nil
+			}
+		}
+		data = append(data, row)
+	}
+	
+	if err := rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+	
+	return columns, data, nil
+}

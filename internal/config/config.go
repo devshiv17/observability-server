@@ -9,10 +9,11 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Database DatabaseConfig `yaml:"database"`
-	Logging  LoggingConfig  `yaml:"logging"`
-	Auth     AuthConfig     `yaml:"auth"`
+	Server     ServerConfig     `yaml:"server"`
+	Database   DatabaseConfig   `yaml:"database"`
+	ClickHouse ClickHouseConfig `yaml:"clickhouse"`
+	Logging    LoggingConfig    `yaml:"logging"`
+	Auth       AuthConfig       `yaml:"auth"`
 }
 
 // ServerConfig holds HTTP server configuration
@@ -34,6 +35,15 @@ type DatabaseConfig struct {
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
 	SSLMode  string `yaml:"sslMode"`
+}
+
+// ClickHouseConfig holds ClickHouse connection configuration
+type ClickHouseConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Database string `yaml:"database"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 // LoggingConfig holds logging configuration
