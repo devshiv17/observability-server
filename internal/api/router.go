@@ -20,11 +20,11 @@ func NewRouter(cfg *config.Config, logger *log.Logger) http.Handler {
 
 	// Initialize ClickHouse client
 	clickhouseClient, err := database.NewClickHouseClient(
-		"192.168.1.2", // host from gateway.yaml
-		9000,          // port from gateway.yaml
-		"default",     // username from gateway.yaml
-		"shiva1712",   // password from gateway.yaml
-		"default",     // database
+		cfg.ClickHouse.Host,
+		cfg.ClickHouse.Port,
+		cfg.ClickHouse.Username,
+		cfg.ClickHouse.Password,
+		cfg.ClickHouse.Database,
 		logger,
 	)
 	if err != nil {
