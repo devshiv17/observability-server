@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
+	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 )
@@ -439,30 +441,131 @@ func (c *ClickHouseClient) QueryRaw(ctx context.Context, query string) ([]string
 	// Scan results
 	var data []map[string]interface{}
 	for rows.Next() {
-		values := make([]interface{}, len(columns))
+		// Create typed variables based on column types
 		valuePtrs := make([]interface{}, len(columns))
-		for i := range values {
-			valuePtrs[i] = &values[i]
+		
+		for i, colType := range columnTypes {
+			typeName := colType.DatabaseTypeName()
+			
+			switch {
+			case strings.HasPrefix(typeName, "DateTime64") || typeName == "DateTime":
+				var t time.Time
+				valuePtrs[i] = &t
+			case typeName == "Date":
+				var d time.Time
+				valuePtrs[i] = &d
+			case typeName == "String" || 
+				 strings.HasPrefix(typeName, "FixedString") || 
+				 typeName == "LowCardinality(String)":
+				var s string
+				valuePtrs[i] = &s
+			case typeName == "Int8":
+				var n int8
+				valuePtrs[i] = &n
+			case typeName == "Int16":
+				var n int16
+				valuePtrs[i] = &n
+			case typeName == "Int32":
+				var n int32
+				valuePtrs[i] = &n
+			case typeName == "Int64":
+				var n int64
+				valuePtrs[i] = &n
+			case typeName == "UInt8":
+				var n uint8
+				valuePtrs[i] = &n
+			case typeName == "UInt16":
+				var n uint16
+				valuePtrs[i] = &n
+			case typeName == "UInt32":
+				var n uint32
+				valuePtrs[i] = &n
+			case typeName == "UInt64":
+				var n uint64
+				valuePtrs[i] = &n
+			case typeName == "Float32":
+				var f float32
+				valuePtrs[i] = &f
+			case typeName == "Float64":
+				var f float64
+				valuePtrs[i] = &f
+			case typeName == "Bool":
+				var b bool
+				valuePtrs[i] = &b
+			case typeName == "UUID":
+				var u string
+				valuePtrs[i] = &u
+			case strings.HasPrefix(typeName, "Array("):
+				var arr string // We'll store arrays as JSON strings
+				valuePtrs[i] = &arr
+			case strings.HasPrefix(typeName, "Map("):
+				var m map[string]string
+				valuePtrs[i] = &m
+			default:
+				// For truly unknown types, try to scan as string first
+				var s string
+				valuePtrs[i] = &s
+			}
 		}
 		
 		if err := rows.Scan(valuePtrs...); err != nil {
-			c.logger.Printf("Error scanning row: %v", err)
 			continue
 		}
 		
 		row := make(map[string]interface{})
 		for i, col := range columns {
-			val := values[i]
-			if val != nil {
-				// Convert byte arrays to strings for JSON serialization
-				if b, ok := val.([]byte); ok {
-					row[col] = string(b)
+			ptr := valuePtrs[i]
+			var val interface{}
+			
+			// Extract the actual value from the pointer
+			switch v := ptr.(type) {
+			case *time.Time:
+				if !(*v).IsZero() {
+					val = (*v).Format(time.RFC3339)
 				} else {
-					row[col] = val
+					val = nil
 				}
-			} else {
-				row[col] = nil
+			case *string:
+				if *v != "" {
+					val = *v
+				} else {
+					val = *v // Keep empty strings as empty strings, not nil
+				}
+			case *int8:
+				val = int64(*v)
+			case *int16:
+				val = int64(*v)
+			case *int32:
+				val = int64(*v)
+			case *int64:
+				val = *v
+			case *uint8:
+				val = uint64(*v)
+			case *uint16:
+				val = uint64(*v)
+			case *uint32:
+				val = uint64(*v)
+			case *uint64:
+				val = *v
+			case *float32:
+				val = float64(*v)
+			case *float64:
+				val = *v
+			case *bool:
+				val = *v
+			case *map[string]string:
+				// Convert map to JSON for the response
+				if *v != nil {
+					val = *v
+				} else {
+					val = map[string]string{}
+				}
+			default:
+				// This should not happen now, but keeping as safety net
+				val = nil
 			}
+			
+			row[col] = val
 		}
 		data = append(data, row)
 	}
